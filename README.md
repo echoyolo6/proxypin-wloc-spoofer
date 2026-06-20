@@ -1,6 +1,6 @@
 # ProxyPin WLOC Response Rewriter
 
-[Chinese README](README.zh-CN.md) | English
+[中文文档](README.zh-CN.md) | English
 
 ProxyPin script for authorized iOS location testing. It intercepts Apple WLOC
 responses for `gs-loc-cn.apple.com/clls/wloc` and `gs-loc.apple.com/clls/wloc`,
