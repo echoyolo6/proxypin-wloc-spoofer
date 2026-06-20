@@ -8,10 +8,8 @@
   <a href="https://github.com/FFF686868/proxypin-wloc-spoofer/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/FFF686868/proxypin-wloc-spoofer?style=for-the-badge&logo=github&label=STARS&color=0891b2"></a>
   <a href="https://github.com/FFF686868/proxypin-wloc-spoofer/network/members"><img alt="GitHub forks" src="https://img.shields.io/github/forks/FFF686868/proxypin-wloc-spoofer?style=for-the-badge&logo=github&label=FORKS&color=0284c7"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/LICENSE-MIT-16a34a?style=for-the-badge"></a>
-  <a href="https://github.com/FFF686868/proxypin-wloc-spoofer/releases"><img alt="Status alpha" src="https://img.shields.io/badge/STATUS-ALPHA-f97316?style=for-the-badge"></a>
   <a href="https://github.com/wanghongenpin/proxypin"><img alt="ProxyPin script" src="https://img.shields.io/badge/PROXYPIN-SCRIPT-334155?style=for-the-badge"></a>
   <a href="https://linux.do"><img alt="Linux.do" src="https://img.shields.io/badge/LINUX.DO-COMMUNITY-334155?style=for-the-badge"></a>
-  <a href="https://github.com/FFF686868/proxypin-wloc-spoofer"><img alt="Open source" src="https://img.shields.io/badge/OPEN--SOURCE-YES-f59e0b?style=for-the-badge"></a>
 </p>
 
 ProxyPin script for authorized iOS location testing. It intercepts Apple WLOC
