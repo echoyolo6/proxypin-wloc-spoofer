@@ -1,5 +1,7 @@
 # ProxyPin WLOC 响应重写脚本
 
+中文 | [English](README.md)
+
 这是一个用于授权 iOS 定位测试的 ProxyPin 脚本。它拦截 Apple WLOC
 接口响应：
 
