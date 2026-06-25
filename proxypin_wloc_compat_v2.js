@@ -11,9 +11,59 @@ var onRequest = async function (context, request) {
 
 var onResponse = (function () {
   var VERSION = "5.3.0";
+  // 填入高德拾取的坐标（GCJ-02），脚本运行时会自动转为 WGS-84
   var TARGET_LONGITUDE = 121.451423;
   var TARGET_LATITUDE = 31.016176;
   var TARGET_ACCURACY = 25;
+
+  // 运行时自动将 GCJ-02 转为 WGS-84
+  var _gcj = gcj02_to_wgs84(TARGET_LONGITUDE, TARGET_LATITUDE);
+  var _WGS_LON = _gcj.lon;
+  var _WGS_LAT = _gcj.lat;
+
+  // GCJ-02 转 WGS-84（迭代法，精度约 0.5 米）
+  function gcj02_to_wgs84(lon, lat) {
+    var a = 6378245.0;
+    var ee = 0.00669342162296594323;
+    function transformLat(x, y) {
+      var ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+      ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+      ret += (20.0 * Math.sin(y * Math.PI) + 40.0 * Math.sin(y / 3.0 * Math.PI)) * 2.0 / 3.0;
+      ret += (160.0 * Math.sin(y / 12.0 * Math.PI) + 320.0 * Math.sin(y * Math.PI / 30.0)) * 2.0 / 3.0;
+      return ret;
+    }
+    function transformLon(x, y) {
+      var ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+      ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+      ret += (20.0 * Math.sin(x * Math.PI) + 40.0 * Math.sin(x / 3.0 * Math.PI)) * 2.0 / 3.0;
+      ret += (150.0 * Math.sin(x / 12.0 * Math.PI) + 300.0 * Math.sin(x / 30.0 * Math.PI)) * 2.0 / 3.0;
+      return ret;
+    }
+    function outOfChina(lon, lat) {
+      return lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271;
+    }
+    if (outOfChina(lon, lat)) return { lon: lon, lat: lat };
+    var dlat = transformLat(lon - 105.0, lat - 35.0);
+    var dlon = transformLon(lon - 105.0, lat - 35.0);
+    var radlat = lat / 180.0 * Math.PI;
+    var magic = Math.sin(radlat);
+    magic = 1 - ee * magic * magic;
+    var sqrtmagic = Math.sqrt(magic);
+    dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * Math.PI);
+    dlon = (dlon * 180.0) / (a / sqrtmagic * Math.cos(radlat) * Math.PI);
+    var wgsLat = lat - dlat;
+    var wgsLon = lon - dlon;
+    // 迭代多次提高精度
+    for (var i = 0; i < 3; i++) {
+      var dlat2 = transformLat(wgsLon - 105.0, wgsLat - 35.0);
+      var dlon2 = transformLon(wgsLon - 105.0, wgsLat - 35.0);
+      dlat2 = (dlat2 * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * Math.PI);
+      dlon2 = (dlon2 * 180.0) / (a / sqrtmagic * Math.cos(radlat) * Math.PI);
+      wgsLat = lat - dlat2;
+      wgsLon = lon - dlon2;
+    }
+    return { lon: wgsLon, lat: wgsLat };
+  }
 
   function isWloc(request) {
     var host = String(request.host || "").toLowerCase();
@@ -152,9 +202,9 @@ var onResponse = (function () {
     for (var j = 0; j < fields.length; j++) {
       var f = fields[j];
       if (f.fieldNo === 1 && f.wireType === 0) {
-        parts.push(encodeField(1, 0, Math.round(TARGET_LATITUDE * 100000000)));
+        parts.push(encodeField(1, 0, Math.round(_WGS_LAT * 100000000)));
       } else if (f.fieldNo === 2 && f.wireType === 0) {
-        parts.push(encodeField(2, 0, Math.round(TARGET_LONGITUDE * 100000000)));
+        parts.push(encodeField(2, 0, Math.round(_WGS_LON * 100000000)));
       } else if (f.fieldNo === 3 && f.wireType === 0) {
         parts.push(encodeField(3, 0, TARGET_ACCURACY));
       } else {
@@ -296,7 +346,8 @@ var onResponse = (function () {
       setHeader(response, "X-WLOC-Patched-Cell", stats.cell);
       setHeader(response, "X-WLOC-Skipped", stats.skipped);
       setHeader(response, "X-WLOC-Gzip", stats.gzip ? "1" : "0");
-      setHeader(response, "X-WLOC-Target", TARGET_LONGITUDE + "," + TARGET_LATITUDE);
+      setHeader(response, "X-WLOC-Target", _WGS_LON + "," + _WGS_LAT);
+      setHeader(response, "X-WLOC-Target-GCJ02", TARGET_LONGITUDE + "," + TARGET_LATITUDE);
       setHeader(response, "Content-Length", patched.length);
       removeHeader(response, "Content-Encoding");
       response.statusCode = 200;
