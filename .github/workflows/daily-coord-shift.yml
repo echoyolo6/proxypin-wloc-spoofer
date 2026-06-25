@@ -1,0 +1,35 @@
+name: Daily Coordinate Shift
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  shift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run coordinate randomizer
+        run: node scripts/randomize_coords.js
+
+      - name: Commit and push
+        run: |
+          if git diff --quiet --exit-code; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add proxypin_wloc_compat_v2.js
+          git commit -m 'chore: daily coordinate shift'
+          git push
