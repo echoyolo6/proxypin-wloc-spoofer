@@ -8,15 +8,21 @@ const LAT_MATCH = /var TARGET_LATITUDE\s*=\s*([0-9]+\.?[0-9]*)\s*;/;
 
 const BASE_LON = 121.451423;
 const BASE_LAT = 31.016176;
-const LON_DRIFT = 0.00002;
-const LAT_DRIFT = 0.00003;
 
-function rnd() {
-  return (Math.random() * 2 - 1);
+function gaussRandom() {
+  const u1 = Math.random();
+  const u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
-const newLon = (BASE_LON + rnd() * LON_DRIFT).toFixed(6);
-const newLat = (BASE_LAT + rnd() * LAT_DRIFT).toFixed(6);
+const MAX_SHIFT_M = 8;
+const LON_SHIFT_M = Math.min(Math.abs(gaussRandom() * 3), MAX_SHIFT_M);
+const LAT_SHIFT_M = Math.min(Math.abs(gaussRandom() * 3), MAX_SHIFT_M);
+const lonSign = Math.random() < 0.5 ? -1 : 1;
+const latSign = Math.random() < 0.5 ? -1 : 1;
+
+const newLon = (BASE_LON + lonSign * LON_SHIFT_M / 111320 / Math.cos(BASE_LAT * Math.PI / 180)).toFixed(6);
+const newLat = (BASE_LAT + latSign * LAT_SHIFT_M / 111320).toFixed(6);
 
 const content = fs.readFileSync(SCRIPT_FILE, 'utf8');
 
