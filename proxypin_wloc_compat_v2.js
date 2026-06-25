@@ -11,8 +11,8 @@ var onRequest = async function (context, request) {
 
 var onResponse = (function () {
   var VERSION = "5.3.0";
-  var TARGET_LONGITUDE = 113.94114;
-  var TARGET_LATITUDE = 22.544577;
+  var TARGET_LONGITUDE = 121.451819;
+  var TARGET_LATITUDE = 31.016025;
   var TARGET_ACCURACY = 25;
 
   function isWloc(request) {
