@@ -20,6 +20,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run coordinate randomizer
+        env:
+          TZ: Asia/Shanghai
         run: node scripts/randomize_coords.js
 
       - name: Commit and push
