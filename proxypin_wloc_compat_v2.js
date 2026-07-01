@@ -12,8 +12,8 @@ var onRequest = async function (context, request) {
 var onResponse = (function () {
   var VERSION = "5.3.0";
   // 填入高德拾取的坐标（GCJ-02），脚本运行时会自动转为 WGS-84
-  var TARGET_LONGITUDE = 121.451450;  // 更新于 2026-07-01 15:03:57
-  var TARGET_LATITUDE  = 31.016221;  // 更新于 2026-07-01 15:03:57
+  var TARGET_LONGITUDE = 121.451413;  // 更新于 2026-07-01 15:06:29
+  var TARGET_LATITUDE  = 31.016168;  // 更新于 2026-07-01 15:06:29
   var TARGET_ACCURACY = 25;
 
   // 运行时自动将 GCJ-02 转为 WGS-84
