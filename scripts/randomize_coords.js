@@ -3,8 +3,9 @@ const path = require('path');
 
 const SCRIPT_FILE = path.join(__dirname, '..', 'proxypin_wloc_compat_v2.js');
 
-const LON_MATCH = /var TARGET_LONGITUDE\s*=\s*([0-9]+\.?[0-9]*)\s*;/;
-const LAT_MATCH = /var TARGET_LATITUDE\s*=\s*([0-9]+\.?[0-9]*)\s*;/;
+// 匹配坐标行，可选的尾部注释会被捕获并丢弃
+const LON_MATCH = /var TARGET_LONGITUDE\s*=\s*([0-9]+\.?[0-9]*)\s*;(?:\s*\/\/.*)?/;
+const LAT_MATCH = /var TARGET_LATITUDE\s*=\s*([0-9]+\.?[0-9]*)\s*;(?:\s*\/\/.*)?/;
 
 const BASE_LON = 121.451423;
 const BASE_LAT = 31.016176;
@@ -31,9 +32,12 @@ if (!content.match(LON_MATCH) || !content.match(LAT_MATCH)) {
   process.exit(1);
 }
 
+const today = new Date();
+const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
 const updated = content
-  .replace(LON_MATCH, `var TARGET_LONGITUDE = ${newLon};`)
-  .replace(LAT_MATCH, `var TARGET_LATITUDE  = ${newLat};`);
+  .replace(LON_MATCH, `var TARGET_LONGITUDE = ${newLon};  // 更新于 ${dateStr}`)
+  .replace(LAT_MATCH, `var TARGET_LATITUDE  = ${newLat};  // 更新于 ${dateStr}`);
 
 fs.writeFileSync(SCRIPT_FILE, updated, 'utf8');
 
