@@ -11,15 +11,42 @@ var onRequest = async function (context, request) {
 
 var onResponse = (function () {
   var VERSION = "5.3.0";
-  // 填入高德拾取的坐标（GCJ-02），脚本运行时会自动转为 WGS-84
-  var TARGET_LONGITUDE = 121.451410;  // 更新于 2026-07-06 23:24:06
-  var TARGET_LATITUDE  = 31.016171;  // 更新于 2026-07-06 23:24:06
+  // 基准坐标（GCJ-02，高德拾取）- 每日基于此坐标做随机偏移，运行时自动转为 WGS-84
+  var BASE_LONGITUDE = 121.451423;
+  var BASE_LATITUDE  = 31.016176;
+  var MAX_SHIFT_M = 8;
   var TARGET_ACCURACY = 25;
 
-  // 运行时自动将 GCJ-02 转为 WGS-84
-  var _gcj = gcj02_to_wgs84(TARGET_LONGITUDE, TARGET_LATITUDE);
-  var _WGS_LON = _gcj.lon;
-  var _WGS_LAT = _gcj.lat;
+  // 基于日期的确定性伪随机数生成器（每日坐标不同，当天内稳定不变）
+  function seededRandom(seed) {
+    var x = Math.sin(seed + 1) * 10000;
+    return x - Math.floor(x);
+  }
+
+  function gaussRandomSeeded(seed) {
+    var u1 = seededRandom(seed);
+    var u2 = seededRandom(seed + 1);
+    return Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  // 每日动态坐标：与 randomize_coords.js 逻辑一致
+  function getDailyCoord() {
+    var now = new Date();
+    var daySeed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+    var lonShiftM = Math.min(Math.abs(gaussRandomSeeded(daySeed * 2) * 3), MAX_SHIFT_M);
+    var latShiftM = Math.min(Math.abs(gaussRandomSeeded(daySeed * 3) * 3), MAX_SHIFT_M);
+    var lonSign = seededRandom(daySeed) < 0.5 ? -1 : 1;
+    var latSign = seededRandom(daySeed + 0.1) < 0.5 ? -1 : 1;
+    var lon = BASE_LONGITUDE + lonSign * lonShiftM / 111320 / Math.cos(BASE_LATITUDE * Math.PI / 180);
+    var lat = BASE_LATITUDE + latSign * latShiftM / 111320;
+    return { lon: lon, lat: lat };
+  }
+
+  // 运行时动态更新，供 patchLocationMessage 使用
+  var _WGS_LON = 0;
+  var _WGS_LAT = 0;
+  var _TARGET_LON = 0;
+  var _TARGET_LAT = 0;
 
   // GCJ-02 转 WGS-84（迭代法，精度约 0.5 米）
   function gcj02_to_wgs84(lon, lat) {
@@ -330,6 +357,14 @@ var onResponse = (function () {
   return async function (context, request, response) {
     if (!isWloc(request)) return response;
 
+    // 每日动态计算目标坐标（GCJ-02 → WGS-84）
+    var _dailyGcj = getDailyCoord();
+    _TARGET_LON = _dailyGcj.lon;
+    _TARGET_LAT = _dailyGcj.lat;
+    var _dailyWgs = gcj02_to_wgs84(_dailyGcj.lon, _dailyGcj.lat);
+    _WGS_LON = _dailyWgs.lon;
+    _WGS_LAT = _dailyWgs.lat;
+
     var stats = { wifi: 0, cell: 0, locations: 0, skipped: 0, gzip: false };
     setHeader(response, "X-WLOC-ProxyPin", "v" + VERSION);
     setHeader(response, "X-WLOC-Mode", "patch-original-response");
@@ -347,7 +382,7 @@ var onResponse = (function () {
       setHeader(response, "X-WLOC-Skipped", stats.skipped);
       setHeader(response, "X-WLOC-Gzip", stats.gzip ? "1" : "0");
       setHeader(response, "X-WLOC-Target", _WGS_LON + "," + _WGS_LAT);
-      setHeader(response, "X-WLOC-Target-GCJ02", TARGET_LONGITUDE + "," + TARGET_LATITUDE);
+      setHeader(response, "X-WLOC-Target-GCJ02", _TARGET_LON + "," + _TARGET_LAT);
       setHeader(response, "Content-Length", patched.length);
       removeHeader(response, "Content-Encoding");
       response.statusCode = 200;
