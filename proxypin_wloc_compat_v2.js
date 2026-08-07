@@ -11,13 +11,13 @@ var onRequest = async function (context, request) {
 
 var onResponse = (function () {
   var VERSION = "5.3.0";
-  // 基准坐标（GCJ-02，高德拾取）- 每日基于此坐标做随机偏移，运行时自动转为 WGS-84
+  // 基准坐标（GCJ-02，高德拾取）- 每次请求都基于此坐标做新的随机偏移，运行时自动转为 WGS-84
   var BASE_LONGITUDE = 121.451423;
   var BASE_LATITUDE  = 31.016176;
   var MAX_SHIFT_M = 8;
   var TARGET_ACCURACY = 25;
 
-  // 基于日期的确定性伪随机数生成器（每日坐标不同，当天内稳定不变）
+  // 基于当前时间和随机数的伪随机生成器，每次调用都会产生不同结果
   function seededRandom(seed) {
     var x = Math.sin(seed + 1) * 10000;
     return x - Math.floor(x);
@@ -29,14 +29,14 @@ var onResponse = (function () {
     return Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
   }
 
-  // 每日动态坐标：与 randomize_coords.js 逻辑一致
-  function getDailyCoord() {
-    var now = new Date();
-    var daySeed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-    var lonShiftM = Math.min(Math.abs(gaussRandomSeeded(daySeed * 2) * 3), MAX_SHIFT_M);
-    var latShiftM = Math.min(Math.abs(gaussRandomSeeded(daySeed * 3) * 3), MAX_SHIFT_M);
-    var lonSign = seededRandom(daySeed) < 0.5 ? -1 : 1;
-    var latSign = seededRandom(daySeed + 0.1) < 0.5 ? -1 : 1;
+  // 每次请求生成新的动态坐标，避免同一天内保持固定值
+  function getDynamicCoord() {
+    var now = Date.now();
+    var requestSeed = now + Math.floor(Math.random() * 1000000);
+    var lonShiftM = Math.min(Math.abs(gaussRandomSeeded(requestSeed * 2) * 3), MAX_SHIFT_M);
+    var latShiftM = Math.min(Math.abs(gaussRandomSeeded(requestSeed * 3) * 3), MAX_SHIFT_M);
+    var lonSign = seededRandom(requestSeed) < 0.5 ? -1 : 1;
+    var latSign = seededRandom(requestSeed + 0.1) < 0.5 ? -1 : 1;
     var lon = BASE_LONGITUDE + lonSign * lonShiftM / 111320 / Math.cos(BASE_LATITUDE * Math.PI / 180);
     var lat = BASE_LATITUDE + latSign * latShiftM / 111320;
     return { lon: lon, lat: lat };
